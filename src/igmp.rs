@@ -1,14 +1,52 @@
+use crate::socket;
+use std::os::unix::io::RawFd;
+use nix::sys::socket::{AddressFamily, SockFlag, SockType, SockProtocol, socket, recvfrom, SockAddr};
+use nix::errno::Errno;
+
 pub struct IgmpSocket {
-    pub socket: std::os::unix::io::RawFd
+    socket: RawFd,
+    buf: [u8; 512 * 1024]
+}
+
+impl IgmpSocket {
+    fn new(socket: RawFd) -> IgmpSocket {
+        return IgmpSocket{socket, buf: [0; 512 * 1024]}
+    }
+}
+
+impl socket::Socket for IgmpSocket {
+    fn socket(&self) -> RawFd{
+        return self.socket;
+    }
+
+    fn handle(&mut self) {
+        igmp_read(self);
+    }
 }
 
 pub fn init() -> IgmpSocket {
-    let rawsocket = nix::sys::socket::socket(
-        nix::sys::socket::AddressFamily::Inet,
-        nix::sys::socket::SockType::Raw,
-        nix::sys::socket::SockFlag::empty(),
-        None
-    ).expect("Unable to create raw socket");
-    let socket = IgmpSocket{socket: rawsocket};
-    return socket;
+    return socket(
+        AddressFamily::Inet,
+        SockType::Raw,
+        SockFlag::empty(),
+        SockProtocol::Udp
+    ).map(|sock: RawFd| IgmpSocket::new(sock)).unwrap();
+}
+
+fn igmp_read(socket: &mut IgmpSocket) {
+    let mut len;
+    let mut source: SockAddr;
+
+    loop {
+        let (l, sa) = recvfrom(socket.socket, &mut socket.buf).unwrap();
+        source = sa;
+        len = l;
+        if Errno::last() == Errno::EINTR {
+            continue;
+        }
+
+        break;
+        // TODO: something
+    }
+    println!{"Received {} bytes from {}", len, source};
 }
