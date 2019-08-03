@@ -1,21 +1,21 @@
-use crate::socket;
+use crate::fd;
 use std::os::unix::io::RawFd;
 use nix::sys::socket::{AddressFamily, SockFlag, SockType, SockProtocol, socket, recvfrom, SockAddr};
 use nix::errno::Errno;
 
 pub struct IgmpSocket {
     socket: RawFd,
-    buf: [u8; 512 * 1024]
+    buf: [u8; 512 * 1024],
 }
 
 impl IgmpSocket {
     fn new(socket: RawFd) -> IgmpSocket {
-        return IgmpSocket{socket, buf: [0; 512 * 1024]}
+        return IgmpSocket { socket, buf: [0; 512 * 1024] };
     }
 }
 
-impl socket::Socket for IgmpSocket {
-    fn socket(&self) -> RawFd{
+impl fd::FD for IgmpSocket {
+    fn fd(&self) -> RawFd {
         return self.socket;
     }
 
@@ -29,7 +29,7 @@ pub fn init() -> IgmpSocket {
         AddressFamily::Inet,
         SockType::Raw,
         SockFlag::empty(),
-        SockProtocol::Udp
+        SockProtocol::Udp,
     ).map(|sock: RawFd| IgmpSocket::new(sock)).unwrap();
 }
 
@@ -48,5 +48,5 @@ fn igmp_read(socket: &mut IgmpSocket) {
         break;
         // TODO: something
     }
-    println!{"Received {} bytes from {}", len, source};
+    println! {"Received {} bytes from {}", len, source};
 }
