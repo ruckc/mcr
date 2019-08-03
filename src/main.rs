@@ -1,5 +1,6 @@
 mod fd;
 mod igmp;
+mod ip;
 
 pub extern crate nix;
 
@@ -29,20 +30,14 @@ fn main() {
             None,
             None,
         ) {
-            Err(e) => match e {
-                Sys(sysno) if sysno == Errno::EINTR => {
-                    continue;
-                }
-                Sys(_) | _ => {
-                    error!("Error on select: {}", e);
-                }
-            },
+            Err(Sys(Errno::EINTR)) => continue,
+            Err(e) => error!("Error on select: {}", e),
             Ok(count) => {
                 if count > 0 {
-                    for s in sockets.iter_mut() {
-                        if fdset.contains(s.fd()) {
-                            s.handle();
-                        }
+                    let ready_socks = sockets.iter_mut().filter(|s| fdset.contains(s.fd()));
+
+                    for s in ready_socks {
+                        s.handle();
                     }
                 }
             }

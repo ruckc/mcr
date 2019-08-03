@@ -5,12 +5,12 @@ use nix::errno::Errno;
 
 pub struct IgmpSocket {
     socket: RawFd,
-    buf: [u8; 512 * 1024],
+    buf: [u8; 2000],
 }
 
 impl IgmpSocket {
     fn new(socket: RawFd) -> IgmpSocket {
-        return IgmpSocket { socket, buf: [0; 512 * 1024] };
+        return IgmpSocket { socket, buf: [0; 2000] };
     }
 }
 
@@ -39,14 +39,19 @@ fn igmp_read(socket: &mut IgmpSocket) {
 
     loop {
         let (l, sa) = recvfrom(socket.socket, &mut socket.buf).unwrap();
+
         source = sa;
         len = l;
+
         if Errno::last() == Errno::EINTR {
             continue;
         }
 
         break;
-        // TODO: something
     }
-    println! {"Received {} bytes from {}", len, source};
+
+    hexdump::hexdump(&socket.buf);
+
+    let ippacket = crate::ip::IpPacket::parse(&socket.buf).unwrap();
+    println! {"Received {} bytes from {} version={} (should be 4 or 6)", len, source, ippacket.ip.version};
 }
