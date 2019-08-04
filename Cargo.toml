@@ -4,12 +4,13 @@ version = "0.1.0"
 authors = ["Curtis Ruck <curtis@ruck.io>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-nix = "0.14.1"
-log = "0.4.8"
+errno = "0.2.4"
 hexdump = "0.1.0"
-syslog = "4.0.1"
+libc = "0.2.60"
+log = "0.4.8"
+nix = "0.14.1"
+num = "0.2.0"
 num-derive = "0.2.5"
 num-traits = "0.2.8"
+syslog = "4.0.1"

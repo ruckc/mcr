@@ -3,18 +3,22 @@ mod igmp;
 mod ip;
 mod logger;
 mod protocol;
+mod socket;
 
+extern crate libc;
 #[macro_use]
 extern crate log;
 extern crate nix;
+extern crate num;
 #[macro_use]
 extern crate num_derive;
+extern crate num_traits;
 
-use nix::sys::select::{FdSet, select};
+use nix::sys::select::{select, FdSet};
 
+use crate::fd::FD;
 use crate::nix::Error::Sys;
 use nix::errno::Errno;
-use crate::fd::FD;
 
 fn main() {
     crate::logger::init();
@@ -27,13 +31,7 @@ fn main() {
             fdset.insert(s.fd());
         }
 
-        match select(
-            None,
-            Some(&mut fdset),
-            None,
-            None,
-            None,
-        ) {
+        match select(None, Some(&mut fdset), None, None, None) {
             Err(Sys(Errno::EINTR)) => continue,
             Err(e) => error!("Error on select: {}", e),
             Ok(count) => {

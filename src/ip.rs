@@ -1,9 +1,11 @@
-use std::net::Ipv4Addr;
 use crate::protocol::Protocol;
+use std::net::Ipv4Addr;
+
+use crate::num::{FromPrimitive};
 
 #[derive(Default)]
 #[repr(C)]
-pub struct IpHdr {
+pub struct IpHeader {
     pub ver_ihl: u8,
     pub tos: u8,
     pub len: u16,
@@ -13,21 +15,16 @@ pub struct IpHdr {
     pub proto: u8,
     pub checksum: u16,
     pub saddr: u32,
-    pub daddr: u32
+    pub daddr: u32,
 }
 
-pub struct IpPacket<B> {
-    ip: IpHdr,
-    body: B
-}
-
-impl IpHdr {
+impl IpHeader {
     pub fn ver(&self) -> u8 {
         return self.ver_ihl >> 4;
     }
 
-    pub fn ihl(&self) -> u8 {
-        return self.ver_ihl & 0x0F;
+    pub fn ihl(&self) -> usize {
+        return (self.ver_ihl & 0x0F) as usize;
     }
 
     pub fn src(&self) -> Ipv4Addr {
@@ -38,11 +35,15 @@ impl IpHdr {
         return Ipv4Addr::from(htonl(self.daddr));
     }
 
-    pub fn protocol(&self) -> Protocol {
-        return Protocol::from_u8(self.proto).unwrap();
+    pub fn protocol(&self) -> Option<Protocol> {
+        return Protocol::from_u8(self.proto);
     }
 }
 
-fn htonl(u: u32) -> u32 {
+pub fn htonl(u: u32) -> u32 {
     return u.to_be();
 }
+
+//pub fn ip_to_ipv4(u: u32) -> Ipv4Addr {
+//    return Ipv4Addr::from(htonl(u));
+//}

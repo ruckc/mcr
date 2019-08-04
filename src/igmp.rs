@@ -1,64 +1,39 @@
-use crate::fd;
+mod header;
+mod socket;
+mod types;
+
+use libc::IPPROTO_IGMP;
+use nix::sys::socket::sockopt::{IpMulticastLoop, IpMulticastTtl, RcvBuf, SndBuf};
+use nix::sys::socket::{AddressFamily, SockFlag, SockType};
+use std::net::Ipv4Addr;
 use std::os::unix::io::RawFd;
-use nix::sys::socket::{AddressFamily, SockFlag, SockType, SockProtocol, socket, recvfrom, SockAddr};
-use nix::errno::Errno;
 
-pub struct IgmpSocket {
-    socket: RawFd,
-    buf: [u8; 2000],
-}
-
-impl IgmpSocket {
-    fn new(socket: RawFd) -> IgmpSocket {
-        return IgmpSocket { socket, buf: [0; 2000] };
-    }
-}
-
-impl fd::FD for IgmpSocket {
-    fn fd(&self) -> RawFd {
-        return self.socket;
-    }
-
-    fn handle(&mut self) {
-        igmp_read(self);
-    }
-}
+use crate::igmp::socket::IgmpSocket;
 
 pub fn init() -> IgmpSocket {
-    return socket(
+    let socket = crate::socket::socket(
         AddressFamily::Inet,
         SockType::Raw,
         SockFlag::empty(),
-        SockProtocol::Udp,
-    ).map(|sock: RawFd| IgmpSocket::new(sock)).unwrap();
-}
-
-fn igmp_read(socket: &mut IgmpSocket) {
-    let mut len;
-    let mut source: SockAddr;
-
-    loop {
-        let (l, sa) = recvfrom(socket.socket, &mut socket.buf).unwrap();
-
-        source = sa;
-        len = l;
-
-        if Errno::last() == Errno::EINTR {
-            continue;
-        }
-
-        break;
-    }
-
-    hexdump::hexdump(&socket.buf);
-
-    let mut ip: crate::ip::IpHdr = Default::default();
-    unsafe {
-        std::ptr::copy_nonoverlapping(socket.buf.as_ptr(), &mut ip as *mut _ as *mut u8, len);
-    }
-    if ip.ihl() != 5 {
-
-        return;
-    }
-    println! {"Received {} bytes from {} ver:{} ihl:{} from:{} to:{}", len, source, ip.ver(), ip.ihl(), ip.src(), ip.dst()};
+        IPPROTO_IGMP,
+    )
+    .map(|sock: RawFd| IgmpSocket::new(sock))
+    .unwrap();
+    socket
+        .setsockopt(RcvBuf, &(5 * 1500))
+        .expect("Unable to set rcvbuf");
+    socket
+        .setsockopt(SndBuf, &(5 * 1500))
+        .expect("Unable to set sndbuf");
+    socket
+        .setsockopt(IpMulticastTtl, &1)
+        .expect("unable to set mc ttl");
+    socket
+        .setsockopt(IpMulticastLoop, &false)
+        .expect("unable to set mc loop to false");
+    socket
+        .join(Ipv4Addr::from([224, 0, 0, 22]))
+        .expect("Unable to join IGMPv3 group 224.0.0.22");
+    info!("IGMP Listener is initialized.");
+    socket
 }
