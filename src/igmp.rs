@@ -52,6 +52,13 @@ fn igmp_read(socket: &mut IgmpSocket) {
 
     hexdump::hexdump(&socket.buf);
 
-    let ippacket = crate::ip::IpPacket::parse(&socket.buf).unwrap();
-    println! {"Received {} bytes from {} version={} (should be 4 or 6)", len, source, ippacket.ip.version};
+    let mut ip: crate::ip::IpHdr = Default::default();
+    unsafe {
+        std::ptr::copy_nonoverlapping(socket.buf.as_ptr(), &mut ip as *mut _ as *mut u8, len);
+    }
+    if ip.ihl() != 5 {
+
+        return;
+    }
+    println! {"Received {} bytes from {} ver:{} ihl:{} from:{} to:{}", len, source, ip.ver(), ip.ihl(), ip.src(), ip.dst()};
 }

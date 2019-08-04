@@ -1,19 +1,23 @@
 mod fd;
 mod igmp;
 mod ip;
-
-pub extern crate nix;
-
-use nix::sys::select::{FdSet, select};
+mod logger;
+mod protocol;
 
 #[macro_use]
 extern crate log;
+extern crate nix;
+#[macro_use]
+extern crate num_derive;
+
+use nix::sys::select::{FdSet, select};
 
 use crate::nix::Error::Sys;
 use nix::errno::Errno;
 use crate::fd::FD;
 
 fn main() {
+    crate::logger::init();
     let mut igmp_socket = igmp::init();
     let mut sockets = [&mut igmp_socket as &mut dyn FD];
 
